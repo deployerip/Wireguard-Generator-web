@@ -78,8 +78,17 @@
             cursor: not-allowed;
         }
 
-        button:hover {
+        /* button:hover {
             background-color: #0056b3;
+        } */
+
+        .endpoint-selection {
+            margin-bottom: 20px;
+        }
+
+        .endpoint-selection label {
+            margin-right: 15px;
+            font-size: 16px;
         }
 
         /* Spinner Styles */
@@ -191,6 +200,14 @@
     <main>
         <header>
             <h1>WireGuard Config Generator</h1>
+            <div class="endpoint-selection">
+                <label>
+                    <input type="radio" name="endpoint" value="ipv4" checked> IPv4
+                </label>
+                <label>
+                    <input type="radio" name="endpoint" value="ipv6"> IPv6
+                </label>
+            </div>
             <button class="get-btn">Get Free Config</button>
         </header>
 
