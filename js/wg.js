@@ -4,12 +4,30 @@ const downloadBtn = document.querySelector('.download-btn');
 const wireGuardConfig = document.querySelector('.wire-guard-config');
 const v2rayConfig = document.querySelector('.v2ray-config');
 
+let ipv4List = [];
+let ipv6List = [];
+
+// Load IPv4 and IPv6 lists from JSON files
+const loadIPLists = async () => {
+    try {
+        const [ipv4Response, ipv6Response] = await Promise.all([
+            fetch('js/ipv4.json'),
+            fetch('js/ipv6.json')
+        ]);
+        ipv4List = await ipv4Response.json();
+        ipv6List = await ipv6Response.json();
+    } catch (error) {
+        console.error('Error loading IP lists:', error);
+    }
+};
+
 // Add a click event listener to the "Get Free Config" button
 getConfigBtn.addEventListener('click', async () => {
     getConfigBtn.disabled = true;
     getConfigBtn.textContent = 'Generating...';
     try {
         showSpinner();
+        await loadIPLists(); // Ensure IP lists are loaded
         const { publicKey, privateKey } = await fetchKeys();
         const installId = generateRandomString(22);
         const fcmToken = `${installId}:APA91b${generateRandomString(134)}`;
@@ -82,13 +100,15 @@ const fetchAccount = async (publicKey, installId, fcmToken) => {
 // Function to generate WireGuard and V2Ray configurations
 const generateConfig = (data, privateKey) => {
     const reserved = generateReserved(data.config.client_id);
-    const wireGuardText = generateWireGuardConfig(data, privateKey);
+    const endpoint = getRandomEndpoint();
+    const wireGuardText = generateWireGuardConfig(data, privateKey, endpoint);
     const v2rayText = generateV2RayURL(
         privateKey,
         data.config.peers[0].public_key,
         data.config.interface.addresses.v4,
         data.config.interface.addresses.v6,
-        reserved
+        reserved,
+        endpoint
     );
     updateDOM(wireGuardConfig, 'WireGuard Format', 'wireguardBox', wireGuardText, 'message1');
     updateDOM(v2rayConfig, 'V2Ray Format', 'v2rayBox', v2rayText, 'message2');
@@ -98,8 +118,16 @@ const generateConfig = (data, privateKey) => {
     });
 };
 
-// Function to generate WireGuard configuration text
-const generateWireGuardConfig = (data, privateKey) => `
+// Function to get a random endpoint based on user selection
+const getRandomEndpoint = () => {
+    const endpointType = document.querySelector('input[name="endpoint"]:checked').value;
+    const ipList = endpointType === 'ipv4' ? ipv4List : ipv6List;
+    const randomIndex = Math.floor(Math.random() * ipList.length);
+    return ipList[randomIndex];
+};
+
+// Function to generate WireGuard configuration text with the selected endpoint
+const generateWireGuardConfig = (data, privateKey, endpoint) => `
 [Interface]
 PrivateKey = ${privateKey}
 Address = ${data.config.interface.addresses.v4}/32, ${data.config.interface.addresses.v6}/128
@@ -109,7 +137,7 @@ MTU = 1280
 [Peer]
 PublicKey = ${data.config.peers[0].public_key}
 AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = engage.cloudflareclient.com:2408
+Endpoint = ${endpoint}
 `;
 
 // Function to generate reserved bytes from the client ID
@@ -119,9 +147,9 @@ const generateReserved = (clientId) =>
         .slice(0, 3)
         .join('%2C');
 
-// Function to generate V2Ray configuration URL
-const generateV2RayURL = (privateKey, publicKey, ipv4, ipv6, reserved) =>
-    `wireguard://${encodeURIComponent(privateKey)}@engage.cloudflareclient.com:2408?address=${encodeURIComponent(
+// Function to generate V2Ray configuration URL with the selected endpoint
+const generateV2RayURL = (privateKey, publicKey, ipv4, ipv6, reserved, endpoint) =>
+    `wireguard://${encodeURIComponent(privateKey)}@${endpoint}?address=${encodeURIComponent(
         ipv4 + '/32'
     )},${encodeURIComponent(ipv6 + '/128')}&reserved=${reserved}&publickey=${encodeURIComponent(
         publicKey
