@@ -51,7 +51,7 @@ getConfigBtn.addEventListener('click', async () => {
 // Function to fetch public and private keys from the server
 const fetchKeys = async () => {
     try {
-        const response = await fetch('https://wg-key.forvps.gq');
+        const response = await fetch('https://www.iranguard.workers.dev/keys');
         if (!response.ok) throw new Error(`Failed to fetch keys: ${response.status}`);
         const data = await response.text();
         return {
