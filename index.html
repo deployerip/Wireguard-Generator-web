@@ -7,25 +7,22 @@
     <title>WireGuard Config Manager</title>
     <style>
         /* Basic Reset */
-        body,
-        h1,
-        h2,
-        p,
-        textarea {
+        body, h1, h2, p, textarea {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "Times New Roman", Times, serif;
             line-height: 1.6;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f9f9f9;
+            background-color: #e0e0e0;
+            color: #000;
         }
 
         main {
@@ -33,62 +30,139 @@
             width: 100%;
             text-align: center;
             padding: 20px;
-            border: 1px solid #ccc;
+            border: 1px solid #000;
             background-color: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
 
         h1 {
             font-size: 24px;
             margin-bottom: 20px;
+            color: #000;
         }
 
         h2 {
             font-size: 20px;
             margin-top: 20px;
             margin-bottom: 10px;
+            color: #000;
         }
 
         textarea {
             width: 100%;
             height: 150px;
             padding: 10px;
-            border: 1px solid #ccc;
-            font-family: monospace;
+            border: 1px solid #000;
+            font-family: "Courier New", Courier, monospace;
             font-size: 14px;
             resize: vertical;
             margin-bottom: 10px;
+            background-color: #f0f0f0;
+            color: #000;
         }
 
-        /* button {
+        button {
             padding: 10px 20px;
             font-size: 16px;
-            border: 1px solid #ccc;
+            border: 1px solid #000;
             cursor: pointer;
-            margin-bottom: 10px;
-            background-color: #007bff;
-            color: white;
-            border-radius: 4px;
+            margin: 10px;
+            background-color: #ccc;
+            color: #000;
+            border-radius: 0;
             transition: background-color 0.3s ease;
-        } */
+        }
 
         button:disabled {
             opacity: 0.7;
             cursor: not-allowed;
         }
 
-        /* button:hover {
-            background-color: #0056b3;
-        } */
+        button:hover {
+            background-color: #bbb;
+        }
 
-        .endpoint-selection {
-            margin-bottom: 20px;
+        /* Choice Buttons */
+        .choice-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 15px 25px;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .choice-btn svg {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            fill: #fff;
+        }
+
+        #personal-btn {
+            background-color: #000;
+            color: #fff;
+        }
+
+        #personal-btn:hover {
+            background-color: #333;
+        }
+
+        #gaming-btn {
+            background-color: #0000ff;
+            color: #fff;
+        }
+
+        #gaming-btn:hover {
+            background-color: #ff0000;
+        }
+
+        #ai-btn {
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #000;
+        }
+
+        #ai-btn:hover {
+            background-color: #f0f0f0;
         }
 
         .endpoint-selection label {
             margin-right: 15px;
             font-size: 16px;
+        }
+
+        .peer-selection label {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .peer-selection input {
+            padding: 5px;
+            font-size: 16px;
+            width: 60px;
+            text-align: center;
+            border: 1px solid #000;
+            background-color: #f0f0f0;
+            color: #000;
+        }
+
+        #ip-distribution {
+            margin-top: 10px;
+        }
+
+        #ip-distribution label {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        #ip-distribution input {
+            padding: 5px;
+            font-size: 16px;
+            width: 60px;
+            text-align: center;
+            border: 1px solid #000;
+            background-color: #f0f0f0;
+            color: #000;
         }
 
         /* Spinner Styles */
@@ -116,13 +190,8 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Popup Message Styles */
@@ -132,40 +201,27 @@
             left: 50%;
             transform: translateX(-50%);
             padding: 10px 20px;
-            border-radius: 4px;
-            background: #28a745;
-            color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 0;
+            background: #ccc;
+            color: #000;
+            box-shadow: none;
             animation: fadeInOut 2.5s forwards;
             font-size: 14px;
             text-align: center;
             z-index: 1000;
+            border: 1px solid #000;
         }
 
         .popup-message.error {
-            background: #dc3545;
+            background: #f00;
+            color: #fff;
         }
 
         @keyframes fadeInOut {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, -20px);
-            }
-
-            15% {
-                opacity: 1;
-                transform: translate(-50%, 0);
-            }
-
-            85% {
-                opacity: 1;
-                transform: translate(-50%, 0);
-            }
-
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -20px);
-            }
+            0% { opacity: 0; transform: translate(-50%, -20px); }
+            15% { opacity: 1; transform: translate(-50%, 0); }
+            85% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -20px); }
         }
 
         /* Footer Styles */
@@ -173,11 +229,11 @@
             text-align: center;
             padding: 10px;
             font-size: 14px;
-            color: #555;
+            color: #000;
         }
 
         footer a {
-            color: #007bff;
+            color: #000;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -192,6 +248,44 @@
             width: 16px;
             height: 16px;
             margin-right: 5px;
+            fill: #000;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #000;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content label {
+            display: block;
+            margin: 10px 0;
+        }
+
+        .modal-content a {
+            color: #000;
+            margin-left: 5px;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -200,34 +294,91 @@
     <main>
         <header>
             <h1>WireGuard Config Generator</h1>
-            <div class="endpoint-selection">
-                <label>
-                    <input type="radio" name="endpoint" value="ipv4" checked> IPv4
-                </label>
-                <label>
-                    <input type="radio" name="endpoint" value="ipv6"> IPv6
-                </label>
+            <div id="initial-choices">
+                <button id="personal-btn" class="choice-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                    Personal Work (VPN)
+                </button>
+                <button id="ai-btn" class="choice-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15h-2v-2h2v2zm0-4h-2V7h2v6zm6 4h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    AI & Development (DNS)
+                </button>
+                <button id="gaming-btn" class="choice-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M21.58 16.09l-1.09-7.66A3.996 3.996 0 0 0 16.53 5H7.47C5.58 5 3.96 6.47 3.5 8.34l-1.09 7.66C2.2 17.22 3.08 18 4.25 18h1.5v3c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-3h6v3c0 .55.45 1 1 1h1.5c.55 0 1-.45 1-1v-3h1.5c1.17 0 2.05-.78 1.83-2.91zM7 13H5v-2h2v2zm-3-4h3V7h2v2h2v2H9v2H7v-2H4V9zm13 4h-2v-2h2v2zm-3-4h3V7h-2v2h-2v2h2v2z"/>
+                    </svg>
+                    Gaming (DNS)
+                </button>
             </div>
-            <button class="get-btn">Get Free Config</button>
+
+            <!-- Personal Work Options -->
+            <div id="personal-options" class="hidden">
+                <div class="endpoint-selection">
+                    <label>
+                        <input type="radio" name="endpoint" value="ipv4" checked> IPv4
+                    </label>
+                    <label>
+                        <input type="radio" name="endpoint" value="ipv6"> IPv6
+                    </label>
+                </div>
+                <div class="peer-selection">
+                    <label for="peer-count">Number of Peers:</label>
+                    <input type="number" id="peer-count" min="1" value="1">
+                    <div id="ip-distribution" style="display: none;">
+                        <label for="ipv4-count">IPv4 Peers:</label>
+                        <input type="number" id="ipv4-count" min="0">
+                        <label for="ipv6-count">IPv6 Peers:</label>
+                        <input type="number" id="ipv6-count" min="0">
+                    </div>
+                </div>
+                <button class="get-btn">Generate Config</button>
+            </div>
+
+            <!-- DNS Selection Modal -->
+            <div id="dns-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>Select DNS</h2>
+                    <div id="gaming-dns" class="hidden">
+                        <label>
+                            <input type="radio" name="dns" value="electro"> Electro DNS (78.157.42.101, 78.157.42.100)
+                            <a href="https://electrotm.org/" target="_blank">Website</a>
+                        </label><br>
+                        <p>More gaming DNS coming soon!</p>
+                    </div>
+                    <div id="ai-dns" class="hidden">
+                        <label>
+                            <input type="radio" name="dns" value="403online"> 403 Online DNS (10.202.10.202, 10.202.10.102)
+                            <a href="https://403.online/download" target="_blank">Website</a>
+                        </label><br>
+                        <label>
+                            <input type="radio" name="dns" value="shecan"> Shecan DNS (178.22.122.100, 185.51.200.2)
+                            <a href="https://shecan.ir/" target="_blank">Website</a>
+                        </label><br>
+                    </div>
+                    <button id="confirm-dns-btn" disabled>Confirm DNS</button>
+                </div>
+            </div>
         </header>
 
         <section class="wire-guard-config"></section>
-        <button class="download-btn">Download Config</button>
+        <button class="download-btn" style="display: none;">Download Config</button>
         <section class="v2ray-config"></section>
     </main>
 
     <footer>
         <a href="https://github.com/deployerip" target="_blank" rel="noopener noreferrer">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                    d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
             </svg>
             GitHub
         </a>
         <a href="mailto:deployerip@duck.com">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                    d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
             </svg>
             Email
         </a>
