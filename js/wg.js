@@ -1,11 +1,26 @@
-// Select DOM elements for buttons, configuration containers, and the main container
+// Select DOM elements
+const initialChoices = document.getElementById('initial-choices');
+const personalBtn = document.getElementById('personal-btn');
+const aiBtn = document.getElementById('ai-btn');
+const gamingBtn = document.getElementById('gaming-btn');
+const personalOptions = document.getElementById('personal-options');
 const getConfigBtn = document.querySelector('.get-btn');
 const downloadBtn = document.querySelector('.download-btn');
 const wireGuardConfig = document.querySelector('.wire-guard-config');
 const v2rayConfig = document.querySelector('.v2ray-config');
+const peerCountInput = document.getElementById('peer-count');
+const ipDistributionDiv = document.getElementById('ip-distribution');
+const ipv4CountInput = document.getElementById('ipv4-count');
+const ipv6CountInput = document.getElementById('ipv6-count');
+const dnsModal = document.getElementById('dns-modal');
+const gamingDns = document.getElementById('gaming-dns');
+const aiDns = document.getElementById('ai-dns');
+const confirmDnsBtn = document.getElementById('confirm-dns-btn');
 
 let ipv4List = [];
 let ipv6List = [];
+let selectedPurpose = null;
+let selectedDNS = null;
 
 // Load IPv4 and IPv6 lists from JSON files
 const loadIPLists = async () => {
@@ -21,13 +36,53 @@ const loadIPLists = async () => {
     }
 };
 
-// Add a click event listener to the "Get Free Config" button
-getConfigBtn.addEventListener('click', async () => {
-    getConfigBtn.disabled = true;
+// Initial choice handlers
+personalBtn.addEventListener('click', () => {
+    selectedPurpose = 'personal';
+    initialChoices.classList.add('hidden');
+    personalOptions.classList.remove('hidden');
+});
+
+aiBtn.addEventListener('click', () => {
+    selectedPurpose = 'ai';
+    initialChoices.classList.add('hidden');
+    dnsModal.classList.remove('hidden');
+    aiDns.classList.remove('hidden');
+});
+
+gamingBtn.addEventListener('click', () => {
+    selectedPurpose = 'gaming';
+    initialChoices.classList.add('hidden');
+    dnsModal.classList.remove('hidden');
+    gamingDns.classList.remove('hidden');
+});
+
+// DNS selection handler
+document.querySelectorAll('input[name="dns"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        selectedDNS = e.target.value;
+        confirmDnsBtn.disabled = false;
+    });
+});
+
+// Confirm DNS button handler
+confirmDnsBtn.addEventListener('click', () => {
+    dnsModal.classList.add('hidden');
+    generateDNSConfig();
+});
+
+// Personal config generation
+getConfigBtn.addEventListener('click', () => {
     getConfigBtn.textContent = 'Generating...';
+    getConfigBtn.disabled = true;
+    generatePersonalConfig();
+});
+
+// Generate personal config
+async function generatePersonalConfig() {
     try {
         showSpinner();
-        await loadIPLists(); // Ensure IP lists are loaded
+        await loadIPLists();
         const { publicKey, privateKey } = await fetchKeys();
         const installId = generateRandomString(22);
         const fcmToken = `${installId}:APA91b${generateRandomString(134)}`;
@@ -39,16 +94,39 @@ getConfigBtn.addEventListener('click', async () => {
     } finally {
         hideSpinner();
         getConfigBtn.disabled = false;
-        getConfigBtn.textContent = 'Get Free Config';
+        getConfigBtn.textContent = 'Generate Config';
         setTimeout(() => {
             if (wireGuardConfig.firstChild) {
                 wireGuardConfig.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }, 300);
     }
-});
+}
 
-// Function to fetch public and private keys from the server
+// Generate DNS-based config (AI or Gaming)
+async function generateDNSConfig() {
+    try {
+        showSpinner();
+        await loadIPLists();
+        const { publicKey, privateKey } = await fetchKeys();
+        const installId = generateRandomString(22);
+        const fcmToken = `${installId}:APA91b${generateRandomString(134)}`;
+        const accountData = await fetchAccount(publicKey, installId, fcmToken);
+        if (accountData) generateDNSWireGuardConfig(accountData, privateKey);
+    } catch (error) {
+        console.error('Error processing configuration:', error);
+        showPopup('Failed to generate config. Please try again.', 'error');
+    } finally {
+        hideSpinner();
+        setTimeout(() => {
+            if (wireGuardConfig.firstChild) {
+                wireGuardConfig.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 300);
+    }
+}
+
+// Fetch keys
 const fetchKeys = async () => {
     try {
         const response = await fetch('https://www.iranguard.workers.dev/keys');
@@ -64,11 +142,11 @@ const fetchKeys = async () => {
     }
 };
 
-// Helper function to extract a specific key from a string using regex
+// Extract key
 const extractKey = (data, keyName) =>
     data.match(new RegExp(`${keyName}:\\s(.+)`))?.[1].trim() || null;
 
-// Function to fetch account data from the server
+// Fetch account
 const fetchAccount = async (publicKey, installId, fcmToken) => {
     const apiUrl = 'https://www.iranguard.workers.dev/wg';
     try {
@@ -97,19 +175,29 @@ const fetchAccount = async (publicKey, installId, fcmToken) => {
     }
 };
 
-// Function to generate WireGuard and V2Ray configurations
+// Generate personal config
 const generateConfig = (data, privateKey) => {
+    const peerCount = parseInt(peerCountInput.value);
+    const ipv4Count = parseInt(ipv4CountInput.value) || 0;
+    const ipv6Count = parseInt(ipv6CountInput.value) || 0;
+
+    if (peerCount > 1 && (ipv4Count + ipv6Count !== peerCount)) {
+        showPopup('The sum of IPv4 and IPv6 peers must equal the total number of peers.', 'error');
+        return;
+    }
+
     const reserved = generateReserved(data.config.client_id);
     const endpoint = getRandomEndpoint();
-    const wireGuardText = generateWireGuardConfig(data, privateKey, endpoint);
-    const v2rayText = generateV2RayURL(
+    const wireGuardText = generateWireGuardConfig(data, privateKey, endpoint, peerCount, ipv4Count, ipv6Count);
+    const v2rayText = peerCount === 1 ? generateV2RayURL(
         privateKey,
         data.config.peers[0].public_key,
         data.config.interface.addresses.v4,
         data.config.interface.addresses.v6,
         reserved,
         endpoint
-    );
+    ) : 'V2Ray format is not supported for more than 1 peer.';
+
     updateDOM(wireGuardConfig, 'WireGuard Format', 'wireguardBox', wireGuardText, 'message1');
     updateDOM(v2rayConfig, 'V2Ray Format', 'v2rayBox', v2rayText, 'message2');
     downloadBtn.style.display = 'block';
@@ -118,36 +206,75 @@ const generateConfig = (data, privateKey) => {
     });
 };
 
-// Function to get a random endpoint based on user selection
-const getRandomEndpoint = () => {
-    const endpointType = document.querySelector('input[name="endpoint"]:checked').value;
+// Generate DNS-based WireGuard config
+function generateDNSWireGuardConfig(data, privateKey) {
+    let dnsServers;
+    let title;
+    switch (selectedPurpose) {
+        case 'gaming':
+            dnsServers = '78.157.42.101, 78.157.42.100'; // Electro
+            title = 'WireGuard Format (Gaming)';
+            break;
+        case 'ai':
+            dnsServers = selectedDNS === '403online' ? '10.202.10.202, 10.202.10.102' : '178.22.122.100, 185.51.200.2';
+            title = 'WireGuard Format (AI & Development)';
+            break;
+    }
+
+    const configText = `[Interface]
+PrivateKey = ${privateKey}
+Address = ${data.config.interface.addresses.v4}/32, ${data.config.interface.addresses.v6}/128
+DNS = ${dnsServers}
+MTU = 1280`;
+
+    updateDOM(wireGuardConfig, title, 'wireguardBox', configText, 'message1');
+    updateDOM(v2rayConfig, 'V2Ray Format', 'v2rayBox', 'V2Ray format is not supported for this configuration', 'message2');
+    downloadBtn.style.display = 'block';
+    document.querySelectorAll('.copy-button').forEach(btn => {
+        btn.addEventListener('click', handleCopyButtonClick);
+    });
+};
+
+// Get random endpoint
+const getRandomEndpoint = (type = null) => {
+    const endpointType = type || document.querySelector('input[name="endpoint"]:checked').value;
     const ipList = endpointType === 'ipv4' ? ipv4List : ipv6List;
     const randomIndex = Math.floor(Math.random() * ipList.length);
     return ipList[randomIndex];
 };
 
-// Function to generate WireGuard configuration text with the selected endpoint
-const generateWireGuardConfig = (data, privateKey, endpoint) => `
-[Interface]
+// Generate WireGuard config for personal use
+const generateWireGuardConfig = (data, privateKey, endpoint, peerCount, ipv4Count, ipv6Count) => {
+    let configText = `[Interface]
 PrivateKey = ${privateKey}
 Address = ${data.config.interface.addresses.v4}/32, ${data.config.interface.addresses.v6}/128
 DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
 MTU = 1280
 
-[Peer]
-PublicKey = ${data.config.peers[0].public_key}
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = ${endpoint}
 `;
 
-// Function to generate reserved bytes from the client ID
+    for (let i = 0; i < peerCount; i++) {
+        const peerType = i < ipv4Count ? 'ipv4' : 'ipv6';
+        const peerEndpoint = getRandomEndpoint(peerType);
+        configText += `[Peer]
+PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = ${peerEndpoint}
+
+`;
+    }
+
+    return configText.trim();
+};
+
+// Generate reserved bytes
 const generateReserved = (clientId) =>
     Array.from(atob(clientId))
         .map((char) => char.charCodeAt(0))
         .slice(0, 3)
         .join('%2C');
 
-// Function to generate V2Ray configuration URL with the selected endpoint
+// Generate V2Ray URL
 const generateV2RayURL = (privateKey, publicKey, ipv4, ipv6, reserved, endpoint) =>
     `wireguard://${encodeURIComponent(privateKey)}@${endpoint}?address=${encodeURIComponent(
         ipv4 + '/32'
@@ -155,7 +282,7 @@ const generateV2RayURL = (privateKey, publicKey, ipv4, ipv6, reserved, endpoint)
         publicKey
     )}&mtu=1420#V2ray-Config`;
 
-// Function to update the DOM with configuration text and buttons
+// Update DOM
 const updateDOM = (container, title, textareaId, content, messageId) => {
     container.innerHTML = `
         <h2>${title}</h2>
@@ -165,27 +292,27 @@ const updateDOM = (container, title, textareaId, content, messageId) => {
     `;
 };
 
-// Function to show the spinner and hide the main content
+// Show spinner
 const showSpinner = () => {
     const spinner = document.querySelector('.spinner');
     const main = document.querySelector('main');
     if (spinner && main) {
-        spinner.style.display = 'flex'; // Show the spinner
-        main.style.display = 'none';   // Hide the main content
+        spinner.style.display = 'flex';
+        main.style.display = 'none';
     }
 };
 
-// Function to hide the spinner and show the main content
+// Hide spinner
 const hideSpinner = () => {
     const spinner = document.querySelector('.spinner');
     const main = document.querySelector('main');
     if (spinner && main) {
-        spinner.style.display = 'none'; // Hide the spinner
-        main.style.display = 'block';   // Show the main content
+        spinner.style.display = 'none';
+        main.style.display = 'block';
     }
 };
 
-// Function to handle copy button clicks
+// Handle copy button click
 const handleCopyButtonClick = async function(e) {
     const targetId = this.getAttribute('data-target');
     const messageId = this.getAttribute('data-message');
@@ -201,7 +328,7 @@ const handleCopyButtonClick = async function(e) {
     }
 };
 
-// Function to display a copy success/failure message
+// Show copy message
 const showCopyMessage = (messageId, message, type = 'success') => {
     const messageElement = document.getElementById(messageId);
     if (messageElement) {
@@ -214,7 +341,7 @@ const showCopyMessage = (messageId, message, type = 'success') => {
     }
 };
 
-// Function to show a popup message
+// Show popup
 const showPopup = (message, type = 'success') => {
     const popup = document.createElement('div');
     popup.textContent = message;
@@ -230,7 +357,7 @@ const showPopup = (message, type = 'success') => {
     }, 2500);
 };
 
-// Function to generate a random string of a given length
+// Generate random string
 const generateRandomString = (length) =>
     Array.from({ length }, () =>
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.charAt(
@@ -238,7 +365,7 @@ const generateRandomString = (length) =>
         )
     ).join('');
 
-// Add a click event listener to the download button
+// Download config
 downloadBtn.addEventListener('click', () => {
     const content = document.querySelector('#wireguardBox')?.value || "No configuration available";
     if (content === "No configuration available") {
@@ -249,7 +376,6 @@ downloadBtn.addEventListener('click', () => {
     showPopup('Configuration file downloaded');
 });
 
-// Function to download a configuration file
 const downloadConfig = (fileName, content) => {
     const element = document.createElement('a');
     const file = new Blob([content], { type: 'application/octet-stream' });
@@ -260,3 +386,15 @@ const downloadConfig = (fileName, content) => {
     element.click();
     document.body.removeChild(element);
 };
+
+// Peer count change handler
+peerCountInput.addEventListener('change', () => {
+    const peerCount = parseInt(peerCountInput.value);
+    if (peerCount > 1) {
+        ipDistributionDiv.style.display = 'block';
+        ipv4CountInput.setAttribute('max', peerCount);
+        ipv6CountInput.setAttribute('max', peerCount);
+    } else {
+        ipDistributionDiv.style.display = 'none';
+    }
+});
