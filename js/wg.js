@@ -16,6 +16,7 @@ const dnsModal = document.getElementById('dns-modal');
 const gamingDns = document.getElementById('gaming-dns');
 const aiDns = document.getElementById('ai-dns');
 const confirmDnsBtn = document.getElementById('confirm-dns-btn');
+const backBtn = document.getElementById('back-btn');
 
 let ipv4List = [];
 let ipv6List = [];
@@ -36,11 +37,33 @@ const loadIPLists = async () => {
     }
 };
 
+// Show back button when an initial choice is made
+const showBackButton = () => {
+    backBtn.classList.remove('hidden');
+};
+
+// Hide back button when returning to initial choices
+const hideBackButton = () => {
+    backBtn.classList.add('hidden');
+};
+
+// Back button click handler
+backBtn.addEventListener('click', () => {
+    initialChoices.classList.remove('hidden');
+    personalOptions.classList.add('hidden');
+    dnsModal.classList.add('hidden');
+    wireGuardConfig.innerHTML = '';
+    v2rayConfig.innerHTML = '';
+    downloadBtn.style.display = 'none';
+    hideBackButton();
+});
+
 // Initial choice handlers
 personalBtn.addEventListener('click', () => {
     selectedPurpose = 'personal';
     initialChoices.classList.add('hidden');
     personalOptions.classList.remove('hidden');
+    showBackButton();
 });
 
 aiBtn.addEventListener('click', () => {
@@ -48,6 +71,7 @@ aiBtn.addEventListener('click', () => {
     initialChoices.classList.add('hidden');
     dnsModal.classList.remove('hidden');
     aiDns.classList.remove('hidden');
+    showBackButton();
 });
 
 gamingBtn.addEventListener('click', () => {
@@ -55,6 +79,7 @@ gamingBtn.addEventListener('click', () => {
     initialChoices.classList.add('hidden');
     dnsModal.classList.remove('hidden');
     gamingDns.classList.remove('hidden');
+    showBackButton();
 });
 
 // DNS selection handler
